@@ -21,7 +21,6 @@ global configdb
 global db_ip
 
 bot_token = config['DEFAULT']['bot_token']
-bots_prefix = config['DEFAULT']['bots_prefix']
 
 database_username = config['DATABASE']['db_username']
 database_password = config['DATABASE']['db_password']
@@ -39,3 +38,6 @@ guild_ids = config['DEFAULT']['guild_ids'].split(',')
 )
 async def analyse(ctx, *args):
     print("here!")
+
+
+bot.start()
