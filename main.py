@@ -29,15 +29,16 @@ database_port = config['DATABASE']['db_port']
 
 bot = interactions.Client(token=bot_token)
 
-guild_ids = config['DEFAULT']['guild_ids'].split(',')
+#guild_ids = config['DEFAULT']['guild_ids'].split(',')
+guild_ids = 713068366419722300
 
 @bot.command(
     name='analyse',
     description='Analyse a given image',
     scope=guild_ids
 )
-async def analyse(ctx, *args):
-    print("here!")
+async def _analyse(ctx, *args):
+    await ctx.send('Analyse command called')
 
 
 bot.start()
