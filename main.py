@@ -89,61 +89,80 @@ async def analyse(ctx):
 
     im.save("temp_1.png")
 
-    team_one_LEFT = 740
-    team_one_RIGHT = 1102
-
-    team_one_TOP_one = 300
-    team_one_BOTTOM_one = 321
-
-    red_lower_limit_one = 83
-    red_upper_limit_one = 91
-
-    red_lower_limit_two = 110
-    red_upper_limit_two = 120
-
-    green_lower_limit_one = 91
-    green_upper_limit_one = 105
-
-    green_lower_limit_two = 150
-    green_upper_limit_two = 160
-
-    blue_lower_limit_one = 117
-    blue_upper_limit_one = 130
-
-    blue_lower_limit_two = 41
-    blue_upper_limit_two = 45
+    
 
 
-    for x in range(6):
+    for x in range(2):
+        top = 300
+        bottom = 321
 
-        im1 = im.crop((team_one_LEFT, team_one_TOP_one, team_one_RIGHT, team_one_BOTTOM_one))
-        im1.save("name.png")
+        if x == 0:
 
-        rgb_im = im1.convert('RGB')
-        r, g, b = rgb_im.getpixel((1, 1))
-        r2, g2, b2 = rgb_im.getpixel((1, 2))
-        r3, g3, b3 = rgb_im.getpixel((2, 1))
-        r4, g4, b4 = rgb_im.getpixel((2, 2))
-        r5, g5, b5 = rgb_im.getpixel((330, 4))
-        r6, g6, b6 = rgb_im.getpixel((330, 5))
-        r7, g7, b7 = rgb_im.getpixel((332, 4))
-        r8, g8, b8 = rgb_im.getpixel((332, 5))
+            left = 740
+            right = 1102
 
-        r = (r + r2 + r3 + r4 + r5 + r6 + r7 + r8) / 8
-        g = (g + g2 + g3 + g4 + g5 + g6 + g7 + g8) / 8
-        b = (b + b2 + b3 + b4 + b5 + b6 + b7 + b8) / 8
+            red_lower_limit_one = 83
+            red_upper_limit_one = 91
 
-        if ((r >= red_lower_limit_one and r <= red_upper_limit_one) or  (r >= red_lower_limit_two and r <= red_upper_limit_two)) and ((g >= green_lower_limit_one and g <= green_upper_limit_one) or (g >= green_lower_limit_two and g <= green_upper_limit_two)) and ((b >= blue_lower_limit_one and b <= blue_upper_limit_one) or (b >= blue_lower_limit_two and b <= blue_upper_limit_two)):
+            red_lower_limit_two = 110
+            red_upper_limit_two = 124
 
-            img = cv2.imread("name.png")
-            text = pytesseract.image_to_string(img)
+            green_lower_limit_one = 91
+            green_upper_limit_one = 105
 
-            await ctx.send(text)
+            green_lower_limit_two = 150
+            green_upper_limit_two = 162
+
+            blue_lower_limit_one = 117
+            blue_upper_limit_one = 130
+
+            blue_lower_limit_two = 41
+            blue_upper_limit_two = 50
+        
         else:
-            await ctx.send("Failed RGB test:\nRGB = " + str(r) + " " +  str(g) + " " + str(b),file=discord.File('name.png'))
+            left = 1290
+            right = 1652
 
-        team_one_TOP_one += 80
-        team_one_BOTTOM_one += 80
+            red_lower_limit_one = 155
+            red_upper_limit_one = 170
+
+            green_lower_limit_one = 35
+            green_upper_limit_one = 48
+
+            blue_lower_limit_one = 50
+            blue_upper_limit_one = 60
+
+
+        for x in range(6):
+
+            im1 = im.crop((left, top, right, bottom))
+            im1.save("name.png")
+
+            rgb_im = im1.convert('RGB')
+            r, g, b = rgb_im.getpixel((1, 1))
+            r2, g2, b2 = rgb_im.getpixel((1, 2))
+            r3, g3, b3 = rgb_im.getpixel((2, 1))
+            r4, g4, b4 = rgb_im.getpixel((2, 2))
+            r5, g5, b5 = rgb_im.getpixel((330, 4))
+            r6, g6, b6 = rgb_im.getpixel((330, 5))
+            r7, g7, b7 = rgb_im.getpixel((332, 4))
+            r8, g8, b8 = rgb_im.getpixel((332, 5))
+
+            r = (r + r2 + r3 + r4 + r5 + r6 + r7 + r8) / 8
+            g = (g + g2 + g3 + g4 + g5 + g6 + g7 + g8) / 8
+            b = (b + b2 + b3 + b4 + b5 + b6 + b7 + b8) / 8
+
+            if ((r >= red_lower_limit_one and r <= red_upper_limit_one) or  (r >= red_lower_limit_two and r <= red_upper_limit_two)) and ((g >= green_lower_limit_one and g <= green_upper_limit_one) or (g >= green_lower_limit_two and g <= green_upper_limit_two)) and ((b >= blue_lower_limit_one and b <= blue_upper_limit_one) or (b >= blue_lower_limit_two and b <= blue_upper_limit_two)):
+
+                img = cv2.imread("name.png")
+                text = pytesseract.image_to_string(img)
+
+                await ctx.send(text,file=discord.File('name.png'))
+            else:
+                await ctx.send("Failed RGB test:\nRGB = " + str(r) + " " +  str(g) + " " + str(b),file=discord.File('name.png'))
+
+            top += 80
+            bottom += 80
 
 
     
