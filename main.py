@@ -82,14 +82,11 @@ async def analyse(ctx):
     with open("FULL_IMAGE.jpg", "wb") as f:
         f.write(r.read())
     
-    
     image_to_process = 'FULL_IMAGE.jpg'
 
     im = Image.open(image_to_process)
 
     im.save("temp_1.png")
-
-    
 
 
     for x in range(2):
@@ -156,6 +153,9 @@ async def analyse(ctx):
 
                 img = cv2.imread("name.png")
                 text = pytesseract.image_to_string(img)
+
+                # remove anything after any spaces (such as the users full name if they're friends)
+                text = (text.split())[0]
 
                 await ctx.send(text,file=discord.File('name.png'))
             else:
