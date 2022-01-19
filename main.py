@@ -61,7 +61,7 @@ async def on_ready():
     
     await bot.change_presence(activity=discord.Game(name="!analyse"))
 
-@bot.command()
+@bot.command(aliases=['a'])
 async def analyse(ctx):
     await ctx.send('Analyse command called')
 
@@ -97,6 +97,10 @@ async def analyse(ctx):
 
     users = []
 
+    level_top_tune = 28
+    level_bottom_tune = 23
+    level_left_tune = 12
+    level_right_tune = 60
 
     for x in range(2):
         top = 300
@@ -111,6 +115,11 @@ async def analyse(ctx):
             pfp_right = 740
             pfp_bottom = bottom + 42
             pfp_top = top - 6
+
+            level_buttom = bottom+level_bottom_tune
+            level_top = top + level_top_tune
+            level_left = pfp_right + level_left_tune
+            level_right = pfp_right + level_right_tune
 
             red_lower_limit_one = 83
             red_upper_limit_one = 91
@@ -138,6 +147,11 @@ async def analyse(ctx):
             pfp_right = 1290
             pfp_bottom = bottom + 42
             pfp_top = top - 6
+
+            level_buttom = bottom+level_bottom_tune
+            level_top = top + level_top_tune
+            level_left = pfp_right + level_left_tune
+            level_right = pfp_right + level_right_tune
 
             red_lower_limit_one = 155
             red_upper_limit_one = 170
@@ -178,12 +192,20 @@ async def analyse(ctx):
 
 
                 pfp_image = f"pfp-{random_number}.png"
+                lvl_image = f"lvl-{random_number}.png"
 
                 img = cv2.imread(name_image)
                 text = pytesseract.image_to_string(img)
 
                 im2 = im.crop((pfp_left, pfp_top, pfp_right, pfp_bottom))
                 im2.save(pfp_image)
+
+                im3 = im.crop((level_left, level_top, level_right, level_buttom))
+                im3.save(lvl_image)
+
+                img = cv2.imread(lvl_image)
+
+                text_level = pytesseract.image_to_string(img)
 
                 # remove anything after any spaces (such as the users full name if they're friends)
                 try:
@@ -193,20 +215,41 @@ async def analyse(ctx):
 
                 users.append([text, random_number])
 
+                # send embed to discord, with the image pfp_image as the thumbnail, the image name_image as the image, and the text as the title
+                embed = discord.Embed(title=text, url="https://www.overbuff.com/search?q=" + text, description =f"Level: {text_level}", color=0x00ff00)
+                file = discord.File(pfp_image, filename="image.png")
+                file1 = discord.File(name_image, filename="image2.png")
+                embed.set_image(url="attachment://image2.png")
+                embed.set_thumbnail(url="attachment://image.png")
+                await ctx.send(files=[file1,file], embed=embed)
+
+                # send the level image
+                file2 = discord.File(lvl_image, filename="image3.png")
+                embed2 = discord.Embed(title=text, url="https://www.overbuff.com/search?q=" + text, color=0x00ff00)
+                embed2.set_image(url="attachment://image3.png")
+                await ctx.send(file=file2, embed=embed2)
+
+
+
                 #await ctx.send(text,file=discord.File(name_image))
                 #await ctx.send(file=discord.File(pfp_image))
             else:
                 await ctx.send("Failed RGB test:\nRGB = " + str(r) + " " +  str(g) + " " + str(b),file=discord.File(name_image))
 
-            top += 80
-            bottom += 80
-            pfp_top += 80
-            pfp_bottom += 80
+            next_user_in_image = 80
+
+            top += next_user_in_image
+            bottom += next_user_in_image
+            pfp_top += next_user_in_image
+            pfp_bottom += next_user_in_image
+            level_top += next_user_in_image
+            level_buttom += next_user_in_image
 
 
     for x in users:
         print(x)  
     
+    '''
     option = webdriver.ChromeOptions()
     # I use the following options as my machine is a window subsystem linux. 
     # I recommend to use the headless option at least, out of the 3
@@ -309,6 +352,6 @@ async def analyse(ctx):
             if len(multi_users) > 0:
                 for y in multi_users:
                     print(y)
-
+    '''
 
 bot.run(bot_token)
