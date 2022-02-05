@@ -19,6 +19,8 @@ import pytesseract
 import cv2
 import os
 import time
+import mariadb
+import sys
 
 config = configparser.ConfigParser()
 
@@ -44,7 +46,7 @@ bot_token = config['DEFAULT']['bot_token']
 database_username = config['DATABASE']['db_username']
 database_password = config['DATABASE']['db_password']
 database_ip = config['DATABASE']['db_ip']
-database_port = config['DATABASE']['db_port']
+database_port = int(config['DATABASE']['db_port'])
 
 bot = ComponentsBot(bot_prefix)
 
@@ -52,6 +54,36 @@ pytesseract.pytesseract.tesseract_cmd = r'C:\\Program Files\\Tesseract-OCR\\tess
 
 #guild_ids = config['DEFAULT']['guild_ids'].split(',')
 guild_ids = 713068366419722300
+
+class connect():
+    def __init__(self):
+        # Connect to MariaDB Platform
+        try:
+            self.db = mariadb.connect(
+                user=database_username,
+                password=database_password,
+                host=database_ip,
+                port=database_port,
+                database="overwatch"
+            )
+        except mariadb.Error as e:
+            print(f"Error connecting to MariaDB Platform: {e}")
+            sys.exit(1)
+        
+        # Get Cursor
+        self.cursor = self.db.cursor()
+    
+def disconnect(database):
+
+    try:
+        # Disconnect from MariaDB Platform
+        cur = database.cursor
+        d = database.db
+        cur.close()
+        d.close()
+    except mariadb.Error as e:
+        print(f"Error disconnecting from MariaDB Platform: {e}")
+
 
 @bot.event
 async def on_ready():
@@ -64,6 +96,12 @@ async def on_ready():
 @bot.command(aliases=['a'])
 async def analyse(ctx):
     await ctx.send('Analyse command called')
+
+    # connect to database
+    database = connect()
+    cursor = database.cursor
+    db = database.db
+
 
     hdr = {'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.64 Safari/537.11',
        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
@@ -167,13 +205,14 @@ async def analyse(ctx):
 
             im1 = im.crop((left, top, right, bottom))
 
-            # generate a random number between 0 and 9999999999, padding the left with zeros to keep them all the same length
-            random_number = str(rand.randint(0, 9999999999)).zfill(10)
+            # generate a random number between 0 and 999999999999999, padding the left with zeros to keep them all the same length
+            random_number = str(rand.randint(0, 999999999999999)).zfill(15)
             name_image = f"name-{random_number}.png"
 
 
             im1.save(name_image)
 
+            # checking colours to rule out missing players
             rgb_im = im1.convert('RGB')
             r, g, b = rgb_im.getpixel((1, 1))
             r2, g2, b2 = rgb_im.getpixel((1, 2))
@@ -184,6 +223,7 @@ async def analyse(ctx):
             r7, g7, b7 = rgb_im.getpixel((332, 4))
             r8, g8, b8 = rgb_im.getpixel((332, 5))
 
+            # finding the avg
             r = (r + r2 + r3 + r4 + r5 + r6 + r7 + r8) / 8
             g = (g + g2 + g3 + g4 + g5 + g6 + g7 + g8) / 8
             b = (b + b2 + b3 + b4 + b5 + b6 + b7 + b8) / 8
@@ -193,6 +233,7 @@ async def analyse(ctx):
 
                 pfp_image = f"pfp-{random_number}.png"
                 lvl_image = f"lvl-{random_number}.png"
+                full_image = f"full-{random_number}.png"
 
                 img = cv2.imread(name_image)
                 text = pytesseract.image_to_string(img)
@@ -200,39 +241,70 @@ async def analyse(ctx):
                 im2 = im.crop((pfp_left, pfp_top, pfp_right, pfp_bottom))
                 im2.save(pfp_image)
 
-                im3 = im.crop((level_left, level_top, level_right, level_buttom))
-                im3.save(lvl_image)
+                #im3 = im.crop((level_left-10, top, right-30, level_buttom))
+                #im3.save(lvl_image)
 
-                img = cv2.imread(lvl_image)
-
-                text_level = pytesseract.image_to_string(img)
+                im4 = im.crop((pfp_left, pfp_top, right, pfp_bottom))
+                im4.save(full_image)
+                
 
                 # remove anything after any spaces (such as the users full name if they're friends)
                 try:
                     text = (text.split())[0]
                 except:
                     text = text
+                
+                with open(full_image,'rb') as f:
+                    fileData=f.read()
+
+
 
                 users.append([text, random_number])
+                cursor.execute("INSERT INTO temp_user (local_id, name, image, time) VALUES (%s, %s, %s, %s)", (str(random_number), text, fileData, time.time()))
+                db.commit()
+                
+                # create a button asking if the name is correct
+                comps = [
+                    [
+                        Button(
+                            label="Incorrect Name", 
+                            custom_id=f"{random_number},WN",
+                            style=4,
+                            disabled=False
+                        ), 
+                        Button(
+                            label="Incorrect Comparison", 
+                            custom_id=f"{random_number},IC",
+                            style=4,
+                            disabled=False
+                        )
+                    ],
+                    [
+                        Button(
+                            label="Correct Comparison", 
+                            custom_id=f"{random_number},CC",
+                            style=3,
+                            disabled=False
+                        ),
+                        Button(
+                            label="Unsure Comparison", 
+                            custom_id=f"{random_number},UC",
+                            style=2,
+                            disabled=False
+                        )
+                    ]
+                ]
 
                 # send embed to discord, with the image pfp_image as the thumbnail, the image name_image as the image, and the text as the title
-                embed = discord.Embed(title=text, url="https://www.overbuff.com/search?q=" + text, description =f"Level: {text_level}", color=0x00ff00)
-                file = discord.File(pfp_image, filename="image.png")
-                file1 = discord.File(name_image, filename="image2.png")
+                embed = discord.Embed(title=text, url="https://www.overbuff.com/search?q=" + text, description =f"Alpha 2.3.9", color=0x00ff00)
+                #file = discord.File(pfp_image, filename="image.png")
+                #file1 = discord.File(name_image, filename="image2.png")
+                #file1 = discord.File(lvl_image, filename="image2.png")
+                file1 = discord.File(full_image, filename="image2.png")
                 embed.set_image(url="attachment://image2.png")
-                embed.set_thumbnail(url="attachment://image.png")
-                await ctx.send(files=[file1,file], embed=embed)
-
-                # send the level image
-                file2 = discord.File(lvl_image, filename="image3.png")
-                embed2 = discord.Embed(title=text, url="https://www.overbuff.com/search?q=" + text, color=0x00ff00)
-                embed2.set_image(url="attachment://image3.png")
-                await ctx.send(file=file2, embed=embed2)
-
-
-
-                #await ctx.send(text,file=discord.File(name_image))
-                #await ctx.send(file=discord.File(pfp_image))
+                await ctx.send(files=[file1], embed=embed, components=comps)
+                #embed.set_thumbnail(url="attachment://image.png")
+                #await ctx.send(files=[file1,file], embed=embed, components=comps)
             else:
                 await ctx.send("Failed RGB test:\nRGB = " + str(r) + " " +  str(g) + " " + str(b),file=discord.File(name_image))
 
@@ -246,9 +318,10 @@ async def analyse(ctx):
             level_buttom += next_user_in_image
 
 
-    for x in users:
-        print(x)  
     
+
+
+
     '''
     option = webdriver.ChromeOptions()
     # I use the following options as my machine is a window subsystem linux. 
