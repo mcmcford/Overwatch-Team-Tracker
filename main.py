@@ -21,6 +21,7 @@ import os
 import time
 import mariadb
 import sys
+import base64
 
 config = configparser.ConfigParser()
 
@@ -102,6 +103,16 @@ async def analyse(ctx):
     cursor = database.cursor
     db = database.db
 
+    
+    # get the last row in the games table
+    cursor.execute("SELECT game_id FROM games ORDER BY game_id DESC LIMIT 1")
+    last_game = cursor.fetchone()
+
+    if last_game is None:
+        game_id = 0
+    else:
+
+        game_id = int(last_game[0]) + 1
 
     hdr = {'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.64 Safari/537.11',
        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
@@ -260,46 +271,79 @@ async def analyse(ctx):
 
 
                 users.append([text, random_number])
-                cursor.execute("INSERT INTO temp_user (local_id, name, image, time) VALUES (%s, %s, %s, %s)", (str(random_number), text, fileData, time.time()))
+                cursor.execute("INSERT INTO temp_user (local_id, name, image, time, game_id) VALUES (%s, %s, %s, %s, %s)", (str(random_number), text, fileData, time.time(), str(game_id)))
                 db.commit()
+
+                # select users from the table users who have the same name as the one we just found
+                cursor.execute("SELECT * FROM users WHERE name = %s", (text,))
+                result = cursor.fetchall()
+
+                users = []
+                # generate random number between 0 and 99999, padding the left with zeros to keep them all the same length
+                random_number_comps = str(rand.randint(0, 99999)).zfill(5)
+
+                multiple = True
+                opts = []
+
+
+                if len(result) == 0:
+                    print("New user found: " + text)
+                    multiple = False
+                else:
+                    
+                    i = 2
+
+                    for user in result:
+                        
+                        name_of_image = f"comp-{random_number_comps}-{user[0]}.png"
+
+                        with open(name_of_image, "wb") as fh:
+                            fh.write(user[2])
+                        
+                        if i == 2:
+                            opts.append(SelectOption(label=f"{i}nd user", value=f"{random_number},{int(user[0])}"))
+                        elif i == 3:
+                            opts.append(SelectOption(label=f"{i}rd user", value=f"{random_number},{int(user[0])}"))
+                        else:
+                            opts.append(SelectOption(label=f"{i}th user", value=f"{random_number},{int(user[0])}"))
+                        users.append([user[0], name_of_image])
                 
-                # create a button asking if the name is correct
-                comps = [
-                    [
-                        Button(
-                            label="Incorrect Name", 
-                            custom_id=f"{random_number},IN",
-                            style=4,
-                            disabled=False
-                        ), 
-                        Button(
-                            label="Incorrect Comparison", 
-                            custom_id=f"{random_number},IC",
-                            style=4,
-                            disabled=False
-                        ), 
-                        Button(
-                            label="Correct Name", 
-                            custom_id=f"{random_number},CN",
-                            style=3,
-                            disabled=False
-                        )
-                    ],
-                    [
-                        Button(
-                            label="Correct Comparison", 
-                            custom_id=f"{random_number},CC",
-                            style=3,
-                            disabled=False
+                
+                # stich the image 'full_image' with the images of the users just found, if there is any
+                if len(users) > 0:
+                    # stitch all the users images together into one image vertically
+                    i = 0
+                    images = [Image.open(full_image)]
+                    for user in users:
+                        images.append(Image.open(user[1]))
+                    result = Image.new('RGB', (images[0].width, (images[0].height * len(images)) + 10))
+                    for i, image in enumerate(images):
+                        if i == 0:
+                            result.paste(image, (0, (i * images[0].height)))
+                            i = 1
+                        else:
+                            result.paste(image, (0, (i * images[0].height) + 10))
+                    result.save(full_image)
+
+                # create a selection for the embed
+
+                buttons = [Button(label="Incorrect Name", custom_id=f"{random_number},IN",style=4,disabled=False),Button(label="Correct Name", custom_id=f"{random_number},CN",style=3,disabled=False)]
+
+                if multiple == True:
+
+                    opts.append(SelectOption(label="None of the above (new user)", value=f"{random_number},New"))
+
+                    # create a button asking if the name is correct
+                    comps = [
+                        Select(
+                            placeholder="Select which user this matches",
+                            options=opts,
+                            custom_id=f"{game_id}"
                         ),
-                        Button(
-                            label="Unsure Comparison", 
-                            custom_id=f"{random_number},UC",
-                            style=2,
-                            disabled=False
-                        )
-                    ]
-                ]
+                        buttons
+                        ]
+                else:
+                    comps = [buttons]
 
                 # send embed to discord, with the image pfp_image as the thumbnail, the image name_image as the image, and the text as the title
                 embed = discord.Embed(title=text, url="https://www.overbuff.com/search?q=" + text, description =f"Alpha 2.4.1", color=0x00ff00)
@@ -458,13 +502,88 @@ async def on_button_click(interaction):
         cursor.execute("INSERT INTO users (name, image, time) VALUES ( %s, %s, %s)", (row[1], row[2], row[3]))
         db.commit()
 
+        # get the id of the row just inserted
+        cursor.execute("SELECT local_id FROM users WHERE name = %s", (row[1],))
+        new_id = cursor.fetchone()[0]
+
+
         # delete the row from the table temp_user
         cursor.execute("DELETE FROM temp_user WHERE local_id = %s", (id,))
+        db.commit()
+
+        # insert the row into the table user
+        cursor.execute("INSERT INTO games (game_id, user_id, time) VALUES ( %s, %s, %s)", (row[4], new_id, row[3]))
+        db.commit()
+
+
+        # delete the interaction
+        await interaction.send("User added to the database!", delete_after=5)
+        await (interaction.message).delete()
+
+    
+    disconnect(database)
+        
+# on select option
+@bot.event
+async def on_select_option(interaction):
+    game_id = interaction.custom_id
+    
+    temp = interaction.values[0].split(",")
+    id = temp[0]
+    user = temp[1]
+
+    # connect to database
+    database = connect()
+    cursor = database.cursor
+    db = database.db
+
+    if "New" in user:
+        # get the  row from the table temp_user based on the id
+        cursor.execute("SELECT * FROM temp_user WHERE local_id = %s", (id,))
+        row = cursor.fetchone()
+
+        # insert the row into the table user
+        cursor.execute("INSERT INTO users (name, image, time) VALUES ( %s, %s, %s)", (row[1], row[2], row[3]))
+        db.commit()
+
+        # get the id of the row just inserted
+        cursor.execute("SELECT local_id FROM users WHERE name = %s", (row[1],))
+        new_id = cursor.fetchone()[0]
+
+        # delete the row from the table temp_user
+        cursor.execute("DELETE FROM temp_user WHERE local_id = %s", (id,))
+        db.commit()
+
+        # insert the row into the table user
+        cursor.execute("INSERT INTO games (game_id, user_id, time) VALUES ( %s, %s, %s)", (row[4], new_id, row[3]))
         db.commit()
 
         # delete the interaction
         await interaction.send("User added to the database!", delete_after=5)
         await (interaction.message).delete()
-        
+    else:
+        # get the  row from the table temp_user based on the id
+        cursor.execute("SELECT * FROM temp_user WHERE local_id = %s", (id,))
+        row = cursor.fetchone()
+
+        # insert the row into the table user
+        cursor.execute("UPDATE users SET image = %s, time = %s WHERE local_id = %s", (row[2], row[3], int(user)))
+        db.commit()
+
+        # delete the row from the table temp_user
+        cursor.execute("DELETE FROM temp_user WHERE local_id = %s", (id,))
+        db.commit()
+
+        # insert the row into the table user
+        cursor.execute("INSERT INTO games (game_id, user_id, time) VALUES ( %s, %s, %s)", (row[4], user, row[3]))
+        db.commit()
+
+        # delete the interaction
+        await interaction.send("Database Updated!", delete_after=5)
+        await (interaction.message).delete()
+
+
+
+
 
 bot.run(bot_token)
