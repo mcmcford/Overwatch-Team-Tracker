@@ -306,6 +306,8 @@ async def analyse(ctx):
                             opts.append(SelectOption(label=f"{i}rd user", value=f"{random_number},{int(user[0])}"))
                         else:
                             opts.append(SelectOption(label=f"{i}th user", value=f"{random_number},{int(user[0])}"))
+                        
+                        i += 1
                         users.append([user[0], name_of_image])
                 
                 
@@ -493,11 +495,12 @@ async def on_button_click(interaction):
     cursor = database.cursor
     db = database.db
 
-    if "CN" in custom_id:
-        # get the  row from the table temp_user based on the id
-        cursor.execute("SELECT * FROM temp_user WHERE local_id = %s", (id,))
-        row = cursor.fetchone()
+    # get the  row from the table temp_user based on the id
+    cursor.execute("SELECT * FROM temp_user WHERE local_id = %s", (id,))
+    row = cursor.fetchone()
 
+    if "CN" in custom_id:
+        
         # insert the row into the table user
         cursor.execute("INSERT INTO users (name, image, time) VALUES ( %s, %s, %s)", (row[1], row[2], row[3]))
         db.commit()
@@ -518,6 +521,23 @@ async def on_button_click(interaction):
 
         # delete the interaction
         await interaction.send("User added to the database!", delete_after=5)
+        await (interaction.message).delete()
+    elif "IN" in custom_id:
+
+        desc = f"Please enter the correct name, as shown in the image below,\n\n this can be done with the command `!correct {id} <name>` eg. `!correct {id} Morgan`"
+
+        # generate random number
+        randint = rand.randint(1, 1000000)
+
+        with open(f"temp-{randint}.png", "wb") as fh:
+            fh.write(row[2])
+
+        # create an embed
+        embed = discord.Embed(title="Name correction", description=desc)
+        embed.set_image(url=f"attachment://temp-{randint}.png")
+
+        # send the embed
+        await interaction.send(embed=embed, file=discord.File(f"temp-{randint}.png"))
         await (interaction.message).delete()
 
     
@@ -567,6 +587,7 @@ async def on_select_option(interaction):
         row = cursor.fetchone()
 
         # insert the row into the table user
+
         cursor.execute("UPDATE users SET image = %s, time = %s WHERE local_id = %s", (row[2], row[3], int(user)))
         db.commit()
 
@@ -582,7 +603,113 @@ async def on_select_option(interaction):
         await interaction.send("Database Updated!", delete_after=5)
         await (interaction.message).delete()
 
+@bot.command()
+async def correct(ctx, id: str = None, name: str = None):
+    if id == None or name == None:
+        await ctx.send("Please enter a valid command, eg. `!correct <id> <name>`", delete_after=15)
+        return
 
+    # connect to database
+    database = connect()
+    cursor = database.cursor
+    db = database.db
+
+    # update the name of the user
+    cursor.execute("UPDATE temp_user SET name = %s WHERE local_id = %s", (name, id))
+    db.commit()
+
+    # get the  row from the table temp_user based on the id
+    cursor.execute("SELECT * FROM temp_user WHERE local_id = %s", (id,))
+    row = cursor.fetchone()
+
+    # select users from the table users who have the same name as the one we just found
+    cursor.execute("SELECT * FROM users WHERE name = %s", (name,))
+    result = cursor.fetchall()
+
+    users = []
+    # generate random number between 0 and 99999999, padding the left with zeros to keep them all the same length
+    random_number_comps = str(rand.randint(0, 99999999)).zfill(5)
+
+    multiple = True
+    opts = []
+
+
+    full_image = f"full-{random_number_comps}.png"
+
+    with open(full_image, "wb") as fh:
+        fh.write(row[2])
+
+    if len(result) == 0:
+        print("New user found: " + name)
+        multiple = False
+    else:
+        
+        i = 2
+
+        for user in result:
+            
+            name_of_image = f"comp-{random_number_comps}-{user[0]}.png"
+
+            with open(name_of_image, "wb") as fh:
+                fh.write(user[2])
+            
+            if i == 2:
+                opts.append(SelectOption(label=f"{i}nd user", value=f"{row[0]},{int(user[0])}"))
+            elif i == 3:
+                opts.append(SelectOption(label=f"{i}rd user", value=f"{row[0]},{int(user[0])}"))
+            else:
+                opts.append(SelectOption(label=f"{i}th user", value=f"{row[0]},{int(user[0])}"))
+            
+            i += 1
+            users.append([user[0], name_of_image])
+    
+    
+    # stich the image 'full_image' with the images of the users just found, if there is any
+    if len(users) > 0:
+        # stitch all the users images together into one image vertically
+        i = 0
+        images = [Image.open(full_image)]
+        for user in users:
+            images.append(Image.open(user[1]))
+        result = Image.new('RGB', (images[0].width, (images[0].height * len(images)) + 10))
+        for i, image in enumerate(images):
+            if i == 0:
+                result.paste(image, (0, (i * images[0].height)))
+                i = 1
+            else:
+                result.paste(image, (0, (i * images[0].height) + 10))
+        result.save(full_image)
+
+    # create a selection for the embed
+
+    buttons = [Button(label="Incorrect Name", custom_id=f"{row[0]},IN",style=4,disabled=False),Button(label="Correct Name", custom_id=f"{row[0]},CN",style=3,disabled=False)]
+
+    if multiple == True:
+
+        opts.append(SelectOption(label="None of the above (new user)", value=f"{row[0]},New"))
+
+        # create a button asking if the name is correct
+        comps = [
+            Select(
+                placeholder="Select which user this matches",
+                options=opts,
+                custom_id=f"{row[4]}"
+            ),
+            buttons
+            ]
+    else:
+        comps = [buttons]
+
+    # send embed to discord, with the image pfp_image as the thumbnail, the image name_image as the image, and the text as the title
+    embed = discord.Embed(title=name, url="https://www.overbuff.com/search?q=" + name, description =f"Alpha 2.4.1", color=0x00ff00)
+    #file = discord.File(pfp_image, filename="image.png")
+    #file1 = discord.File(name_image, filename="image2.png")
+    #file1 = discord.File(lvl_image, filename="image2.png")
+    file1 = discord.File(full_image, filename="image2.png")
+    embed.set_image(url="attachment://image2.png")
+    await ctx.send(files=[file1], embed=embed, components=comps)
+    #embed.set_thumbnail(url="attachment://image.png")
+    #await ctx.send(files=[file1,file], embed=embed, components=comps)
 
 
 
