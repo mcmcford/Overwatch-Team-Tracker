@@ -268,7 +268,7 @@ async def analyse(ctx):
                     [
                         Button(
                             label="Incorrect Name", 
-                            custom_id=f"{random_number},WN",
+                            custom_id=f"{random_number},IN",
                             style=4,
                             disabled=False
                         ), 
@@ -276,6 +276,12 @@ async def analyse(ctx):
                             label="Incorrect Comparison", 
                             custom_id=f"{random_number},IC",
                             style=4,
+                            disabled=False
+                        ), 
+                        Button(
+                            label="Correct Name", 
+                            custom_id=f"{random_number},CN",
+                            style=3,
                             disabled=False
                         )
                     ],
@@ -296,7 +302,7 @@ async def analyse(ctx):
                 ]
 
                 # send embed to discord, with the image pfp_image as the thumbnail, the image name_image as the image, and the text as the title
-                embed = discord.Embed(title=text, url="https://www.overbuff.com/search?q=" + text, description =f"Alpha 2.3.9", color=0x00ff00)
+                embed = discord.Embed(title=text, url="https://www.overbuff.com/search?q=" + text, description =f"Alpha 2.4.1", color=0x00ff00)
                 #file = discord.File(pfp_image, filename="image.png")
                 #file1 = discord.File(name_image, filename="image2.png")
                 #file1 = discord.File(lvl_image, filename="image2.png")
@@ -316,11 +322,11 @@ async def analyse(ctx):
             pfp_bottom += next_user_in_image
             level_top += next_user_in_image
             level_buttom += next_user_in_image
+    
+    disconnect(database)
 
 
     
-
-
 
     '''
     option = webdriver.ChromeOptions()
@@ -426,5 +432,39 @@ async def analyse(ctx):
                 for y in multi_users:
                     print(y)
     '''
+
+# on button press
+@bot.event
+async def on_button_click(interaction):
+    print(interaction.custom_id)
+
+    custom_id = interaction.custom_id
+
+    temp = custom_id.split(",")
+    id = temp[0]
+    button = temp[1]
+
+    # connect to database
+    database = connect()
+    cursor = database.cursor
+    db = database.db
+
+    if "CN" in custom_id:
+        # get the  row from the table temp_user based on the id
+        cursor.execute("SELECT * FROM temp_user WHERE local_id = %s", (id,))
+        row = cursor.fetchone()
+
+        # insert the row into the table user
+        cursor.execute("INSERT INTO users (name, image, time) VALUES ( %s, %s, %s)", (row[1], row[2], row[3]))
+        db.commit()
+
+        # delete the row from the table temp_user
+        cursor.execute("DELETE FROM temp_user WHERE local_id = %s", (id,))
+        db.commit()
+
+        # delete the interaction
+        await interaction.send("User added to the database!", delete_after=5)
+        await (interaction.message).delete()
+        
 
 bot.run(bot_token)
