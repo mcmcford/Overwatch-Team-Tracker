@@ -209,7 +209,7 @@ async def analyse(ctx):
             green_upper_limit_one = 48
 
             blue_lower_limit_one = 50
-            blue_upper_limit_one = 60
+            blue_upper_limit_one = 62
 
 
         for x in range(6):
@@ -520,7 +520,7 @@ async def on_button_click(interaction):
 
 
         # delete the interaction
-        await interaction.send("User added to the database!", delete_after=5)
+        # await interaction.send("User added to the database!", delete_after=5)
         await (interaction.message).delete()
     elif "IN" in custom_id:
 
@@ -579,7 +579,7 @@ async def on_select_option(interaction):
         db.commit()
 
         # delete the interaction
-        await interaction.send("User added to the database!", delete_after=5)
+        #await interaction.send("User added to the database!", delete_after=5)
         await (interaction.message).delete()
     else:
         # get the  row from the table temp_user based on the id
@@ -600,7 +600,7 @@ async def on_select_option(interaction):
         db.commit()
 
         # delete the interaction
-        await interaction.send("Database Updated!", delete_after=5)
+        # await interaction.send("Database Updated!", delete_after=5)
         await (interaction.message).delete()
 
 @bot.command()
