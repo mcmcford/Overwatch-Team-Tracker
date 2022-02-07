@@ -22,6 +22,7 @@ import time
 import mariadb
 import sys
 import base64
+import datetime
 
 config = configparser.ConfigParser()
 
@@ -170,7 +171,7 @@ async def analyse(ctx):
             level_left = pfp_right + level_left_tune
             level_right = pfp_right + level_right_tune
 
-            red_lower_limit_one = 83
+            red_lower_limit_one = 80
             red_upper_limit_one = 91
 
             red_lower_limit_two = 110
@@ -179,7 +180,7 @@ async def analyse(ctx):
             green_lower_limit_one = 91
             green_upper_limit_one = 105
 
-            green_lower_limit_two = 150
+            green_lower_limit_two = 148
             green_upper_limit_two = 162
 
             blue_lower_limit_one = 117
@@ -284,6 +285,7 @@ async def analyse(ctx):
 
                 multiple = True
                 opts = []
+                descript = ""
 
 
                 if len(result) == 0:
@@ -297,18 +299,34 @@ async def analyse(ctx):
                         
                         name_of_image = f"comp-{random_number_comps}-{user[0]}.png"
 
+                        # count the number of times the userID user[0] is in the games table
+                        cursor.execute("SELECT COUNT(*) FROM games WHERE user_id = %s", (user[0],))
+                        result_count = cursor.fetchone()
+
+                        # get the time value from the users table where the userID is user[0]
+                        cursor.execute("SELECT time FROM users WHERE local_id = %s", (user[0],))
+                        result_time = cursor.fetchone()
+
+                        # convert the time value from epoch to a readable format
+                        result_time = datetime.datetime.fromtimestamp(result_time[0]).strftime('%Y-%m-%d %H:%M:%S')
+
                         with open(name_of_image, "wb") as fh:
                             fh.write(user[2])
                         
                         if i == 2:
                             opts.append(SelectOption(label=f"{i}nd user", value=f"{random_number},{int(user[0])}"))
+                            descript = descript + f"{i}nd user has been logged {result_count[0]} times, last logged {result_time}\n\n"
                         elif i == 3:
                             opts.append(SelectOption(label=f"{i}rd user", value=f"{random_number},{int(user[0])}"))
+                            descript = descript + f"{i}rd user has been logged {result_count[0]} times, last logged {result_time}\n\n"
                         else:
                             opts.append(SelectOption(label=f"{i}th user", value=f"{random_number},{int(user[0])}"))
+                            descript = descript + f"{i}th user has been logged {result_count[0]} times, last logged {result_time}\n\n"
                         
                         i += 1
-                        users.append([user[0], name_of_image])
+                        
+
+                        users.append([user[0], name_of_image,result_count])
                 
                 
                 # stich the image 'full_image' with the images of the users just found, if there is any
@@ -348,7 +366,7 @@ async def analyse(ctx):
                     comps = [buttons]
 
                 # send embed to discord, with the image pfp_image as the thumbnail, the image name_image as the image, and the text as the title
-                embed = discord.Embed(title=text, url="https://www.overbuff.com/search?q=" + text, description =f"Alpha 2.4.1", color=0x00ff00)
+                embed = discord.Embed(title=text, url="https://www.overbuff.com/search?q=" + text, description =descript, color=0x00ff00)
                 #file = discord.File(pfp_image, filename="image.png")
                 #file1 = discord.File(name_image, filename="image2.png")
                 #file1 = discord.File(lvl_image, filename="image2.png")
@@ -609,6 +627,9 @@ async def correct(ctx, id: str = None, name: str = None):
         await ctx.send("Please enter a valid command, eg. `!correct <id> <name>`", delete_after=15)
         return
 
+    # delete the message 
+    await ctx.message.delete()
+
     # connect to database
     database = connect()
     cursor = database.cursor
@@ -632,6 +653,7 @@ async def correct(ctx, id: str = None, name: str = None):
 
     multiple = True
     opts = []
+    descript = ""
 
 
     full_image = f"full-{random_number_comps}.png"
@@ -650,15 +672,29 @@ async def correct(ctx, id: str = None, name: str = None):
             
             name_of_image = f"comp-{random_number_comps}-{user[0]}.png"
 
+            # count the number of times the userID user[0] is in the games table
+            cursor.execute("SELECT COUNT(*) FROM games WHERE user_id = %s", (user[0],))
+            result_count = cursor.fetchone()
+
+            # get the time value from the users table where the userID is user[0]
+            cursor.execute("SELECT time FROM users WHERE local_id = %s", (user[0],))
+            result_time = cursor.fetchone()
+
+            # convert the time value from epoch to a readable format
+            result_time = datetime.datetime.fromtimestamp(result_time[0]).strftime('%Y-%m-%d %H:%M:%S')
+
             with open(name_of_image, "wb") as fh:
                 fh.write(user[2])
             
             if i == 2:
-                opts.append(SelectOption(label=f"{i}nd user", value=f"{row[0]},{int(user[0])}"))
+                opts.append(SelectOption(label=f"{i}nd user", value=f"{random_number},{int(user[0])}"))
+                descript = descript + f"{i}nd user has been logged {result_count[0]} times, last logged {result_time}\n\n"
             elif i == 3:
-                opts.append(SelectOption(label=f"{i}rd user", value=f"{row[0]},{int(user[0])}"))
+                opts.append(SelectOption(label=f"{i}rd user", value=f"{random_number},{int(user[0])}"))
+                descript = descript + f"{i}rd user has been logged {result_count[0]} times, last logged {result_time}\n\n"
             else:
-                opts.append(SelectOption(label=f"{i}th user", value=f"{row[0]},{int(user[0])}"))
+                opts.append(SelectOption(label=f"{i}th user", value=f"{random_number},{int(user[0])}"))
+                descript = descript + f"{i}th user has been logged {result_count[0]} times, last logged {result_time}\n\n"
             
             i += 1
             users.append([user[0], name_of_image])
@@ -701,7 +737,7 @@ async def correct(ctx, id: str = None, name: str = None):
         comps = [buttons]
 
     # send embed to discord, with the image pfp_image as the thumbnail, the image name_image as the image, and the text as the title
-    embed = discord.Embed(title=name, url="https://www.overbuff.com/search?q=" + name, description =f"Alpha 2.4.1", color=0x00ff00)
+    embed = discord.Embed(title=name, url="https://www.overbuff.com/search?q=" + name, description =descript, color=0x00ff00)
     #file = discord.File(pfp_image, filename="image.png")
     #file1 = discord.File(name_image, filename="image2.png")
     #file1 = discord.File(lvl_image, filename="image2.png")
