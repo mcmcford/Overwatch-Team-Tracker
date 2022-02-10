@@ -655,6 +655,10 @@ async def correct(ctx, id: str = None, name: str = None):
     opts = []
     descript = ""
 
+    # generate a random number between 0 and 999999999999999, padding the left with zeros to keep them all the same length
+    random_number = str(rand.randint(0, 999999999999999)).zfill(15)
+    name_image = f"name-{random_number}.png"
+
 
     full_image = f"full-{random_number_comps}.png"
 
@@ -717,7 +721,7 @@ async def correct(ctx, id: str = None, name: str = None):
         result.save(full_image)
 
     # create a selection for the embed
-
+    disconnect(database)
     buttons = [Button(label="Incorrect Name", custom_id=f"{row[0]},IN",style=4,disabled=False),Button(label="Correct Name", custom_id=f"{row[0]},CN",style=3,disabled=False)]
 
     if multiple == True:
@@ -747,6 +751,21 @@ async def correct(ctx, id: str = None, name: str = None):
     #embed.set_thumbnail(url="attachment://image.png")
     #await ctx.send(files=[file1,file], embed=embed, components=comps)
 
+# bot command called last game to show the players in the last submitted game
+@bot.command(name="lastgame", help="Shows the players in the last submitted game")
+async def lastgame(ctx):
+    # get the game_id of the last row in the table games
+    database = connect()
+    cursor = database.cursor
+    db = database.db
 
+    cursor.execute("SELECT game_id FROM games ORDER BY game_id DESC LIMIT 1")
+    game_id = cursor.fetchone()[0]
+
+    # get all rows from the games table where the game_id is the same as the one we just found
+    cursor.execute("SELECT * FROM games WHERE game_id = %s", (game_id,))
+    result = cursor.fetchall()
+
+    disconnect(database)
 
 bot.run(bot_token)
