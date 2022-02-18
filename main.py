@@ -771,22 +771,22 @@ async def lastgame(ctx):
 
     first = True
     i = 1
-    description = "Name, last logged\n\n"
+    description = "ID  -  Name\n\n"
 
     for x in result:
         # get the name of the user from the users table where the user_id is the same as the one we just found
-        cursor.execute("SELECT name,image,time FROM users WHERE local_id = %s", (x[0],))
+        cursor.execute("SELECT name,image,time,local_id FROM users WHERE local_id = %s", (x[0],))
         details = cursor.fetchone()
 
         # calculate the time since the user was last logged
-        time_since = datetime.datetime.now() - datetime.datetime.fromtimestamp(details[2])
+        #time_since = datetime.datetime.now() - datetime.datetime.fromtimestamp(details[2])
         # convert the time from epoch to hh:mm:ss
-        time_since = time_since.seconds // 3600, time_since.seconds // 60, time_since.seconds % 60
-        time_since = str(time_since[0]) + ":" + str(time_since[1]) + ":" + str(time_since[2])
+        #time_since = time_since.seconds // 3600, time_since.seconds // 60, time_since.seconds % 60
+        #time_since = str(time_since[0]) + ":" + str(time_since[1]) + ":" + str(time_since[2])
         
         # convert the name to all uppercase
 
-        description = description + f"{details[0].upper()},      **{time_since}**\n"
+        description = description + f"{details[3]}  -  {details[0].upper()}\n"
 
         # save the image of the user to a file
         random_number = str(rand.randint(0, 999999999999999)).zfill(15)
@@ -797,8 +797,6 @@ async def lastgame(ctx):
         # open the image just saved
         im = Image.open(name_image_lg)
 
-
-
         if first == True:
             first = False
             # create an image
@@ -807,6 +805,8 @@ async def lastgame(ctx):
         else:
             result.paste(im, (0, (im.height * i)))
             i += 1
+        
+        os.remove(name_image_lg)
 
     name_image_stiched_lg = f"name-{random_number}-stlg.png"
 
@@ -819,10 +819,10 @@ async def lastgame(ctx):
     embed.set_thumbnail(url="attachment://image.png")
     await ctx.send(files=[file], embed=embed)
 
-
-
-
-
     disconnect(database)
+
+    # delete the image files
+
+    os.remove(name_image_stiched_lg)
 
 bot.run(bot_token)
