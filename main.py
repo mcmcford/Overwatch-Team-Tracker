@@ -97,8 +97,6 @@ async def on_ready():
 
 @bot.command(aliases=['a'])
 async def analyse(ctx):
-    await ctx.send('Analyse command called')
-
     # connect to database
     database = connect()
     cursor = database.cursor
@@ -188,6 +186,9 @@ async def analyse(ctx):
 
             blue_lower_limit_two = 41
             blue_upper_limit_two = 50
+
+            # used for soritng the players in the database
+            team = 0
         
         else:
             left = 1290
@@ -211,6 +212,8 @@ async def analyse(ctx):
 
             blue_lower_limit_one = 50
             blue_upper_limit_one = 62
+
+            team = 1
 
 
         for x in range(6):
@@ -272,7 +275,7 @@ async def analyse(ctx):
                     fileData=f.read()
 
                 users.append([text, random_number])
-                cursor.execute("INSERT INTO temp_user (local_id, name, image, time, game_id) VALUES (%s, %s, %s, %s, %s)", (str(random_number), text, fileData, time.time(), str(game_id)))
+                cursor.execute("INSERT INTO temp_user (local_id, name, image, time, game_id, team) VALUES (%s, %s, %s, %s, %s, %s)", (str(random_number), text, fileData, time.time(), str(game_id), team))
                 db.commit()
 
                 # select users from the table users who have the same name as the one we just found
@@ -344,10 +347,11 @@ async def analyse(ctx):
                         else:
                             result.paste(image, (0, (i * images[0].height) + 10))
                     result.save(full_image)
+                
+                    buttons = [Button(label="Incorrect Name", custom_id=f"{random_number},IN",style=4,disabled=False),Button(label="Correct Name", custom_id=f"{random_number},CN",style=3,disabled=True)]
+                else:
 
-                # create a selection for the embed
-
-                buttons = [Button(label="Incorrect Name", custom_id=f"{random_number},IN",style=4,disabled=False),Button(label="Correct Name", custom_id=f"{random_number},CN",style=3,disabled=False)]
+                    buttons = [Button(label="Incorrect Name", custom_id=f"{random_number},IN",style=4,disabled=False),Button(label="Correct Name", custom_id=f"{random_number},CN",style=3,disabled=False)]
 
                 if multiple == True:
 
@@ -367,14 +371,9 @@ async def analyse(ctx):
 
                 # send embed to discord, with the image pfp_image as the thumbnail, the image name_image as the image, and the text as the title
                 embed = discord.Embed(title=text, url="https://www.overbuff.com/search?q=" + text, description =descript, color=0x00ff00)
-                #file = discord.File(pfp_image, filename="image.png")
-                #file1 = discord.File(name_image, filename="image2.png")
-                #file1 = discord.File(lvl_image, filename="image2.png")
                 file1 = discord.File(full_image, filename="image2.png")
                 embed.set_image(url="attachment://image2.png")
                 await ctx.send(files=[file1], embed=embed, components=comps)
-                #embed.set_thumbnail(url="attachment://image.png")
-                #await ctx.send(files=[file1,file], embed=embed, components=comps)
 
                 # delete the images we created
                 os.remove(full_image)
@@ -536,7 +535,7 @@ async def on_button_click(interaction):
         db.commit()
 
         # insert the row into the table user
-        cursor.execute("INSERT INTO games (game_id, user_id, time) VALUES ( %s, %s, %s)", (row[4], new_id, row[3]))
+        cursor.execute("INSERT INTO games (game_id, user_id, time, team) VALUES ( %s, %s, %s, %s)", (row[4], new_id, row[3], row[4]))
         db.commit()
 
 
@@ -596,7 +595,7 @@ async def on_select_option(interaction):
         db.commit()
 
         # insert the row into the table user
-        cursor.execute("INSERT INTO games (game_id, user_id, time) VALUES ( %s, %s, %s)", (row[4], new_id, row[3]))
+        cursor.execute("INSERT INTO games (game_id, user_id, time, team) VALUES ( %s, %s, %s, %s)", (row[4], new_id, row[3], row[4]))
         db.commit()
 
         # delete the interaction
@@ -617,7 +616,7 @@ async def on_select_option(interaction):
         db.commit()
 
         # insert the row into the table user
-        cursor.execute("INSERT INTO games (game_id, user_id, time) VALUES ( %s, %s, %s)", (row[4], user, row[3]))
+        cursor.execute("INSERT INTO games (game_id, user_id, time, team) VALUES ( %s, %s, %s, %s)", (row[4], user, row[3], row[4]))
         db.commit()
 
         # delete the interaction
@@ -766,7 +765,7 @@ async def lastgame(ctx):
     game_id = cursor.fetchone()[0]
 
     # get all rows from the games table where the game_id is the same as the one we just found
-    cursor.execute("SELECT user_id FROM games WHERE game_id = %s", (game_id,))
+    cursor.execute("SELECT user_id FROM games WHERE game_id = %s SORT BY team ASC", (game_id,))
     result = cursor.fetchall()
 
     first = True
