@@ -246,14 +246,14 @@ async def analyse(ctx):
             if ((r >= red_lower_limit_one and r <= red_upper_limit_one) or  (r >= red_lower_limit_two and r <= red_upper_limit_two)) and ((g >= green_lower_limit_one and g <= green_upper_limit_one) or (g >= green_lower_limit_two and g <= green_upper_limit_two)) and ((b >= blue_lower_limit_one and b <= blue_upper_limit_one) or (b >= blue_lower_limit_two and b <= blue_upper_limit_two)):
 
 
-                pfp_image = f"pfp-{random_number}.png"
+                #pfp_image = f"pfp-{random_number}.png"
                 full_image = f"full-{random_number}.png"
 
                 img = cv2.imread(name_image)
                 text = pytesseract.image_to_string(img)
 
-                im2 = im.crop((pfp_left, pfp_top, pfp_right, pfp_bottom))
-                im2.save(pfp_image)
+                #im2 = im.crop((pfp_left, pfp_top, pfp_right, pfp_bottom))
+                #im2.save(pfp_image)
 
                 #im3 = im.crop((level_left-10, top, right-30, level_buttom))
                 #im3.save(lvl_image)
