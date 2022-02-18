@@ -721,10 +721,12 @@ async def correct(ctx, id: str = None, name: str = None):
             else:
                 result.paste(image, (0, (i * images[0].height) + 10))
         result.save(full_image)
-
+        buttons = [Button(label="Incorrect Name", custom_id=f"{row[0]},IN",style=4,disabled=False),Button(label="Correct Name", custom_id=f"{row[0]},CN",style=3,disabled=True)]
+    else:
+        buttons = [Button(label="Incorrect Name", custom_id=f"{row[0]},IN",style=4,disabled=False),Button(label="Correct Name", custom_id=f"{row[0]},CN",style=3,disabled=False)]
     # create a selection for the embed
     disconnect(database)
-    buttons = [Button(label="Incorrect Name", custom_id=f"{row[0]},IN",style=4,disabled=False),Button(label="Correct Name", custom_id=f"{row[0]},CN",style=3,disabled=False)]
+    
 
     if multiple == True:
 
