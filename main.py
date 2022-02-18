@@ -535,7 +535,7 @@ async def on_button_click(interaction):
         db.commit()
 
         # insert the row into the table user
-        cursor.execute("INSERT INTO games (game_id, user_id, time, team) VALUES ( %s, %s, %s, %s)", (row[4], new_id, row[3], row[4]))
+        cursor.execute("INSERT INTO games (game_id, user_id, time, team) VALUES ( %s, %s, %s, %s)", (row[4], new_id, row[3], row[5]))
         db.commit()
 
 
@@ -595,7 +595,7 @@ async def on_select_option(interaction):
         db.commit()
 
         # insert the row into the table user
-        cursor.execute("INSERT INTO games (game_id, user_id, time, team) VALUES ( %s, %s, %s, %s)", (row[4], new_id, row[3], row[4]))
+        cursor.execute("INSERT INTO games (game_id, user_id, time, team) VALUES ( %s, %s, %s, %s)", (row[4], new_id, row[3], row[5]))
         db.commit()
 
         # delete the interaction
@@ -616,7 +616,7 @@ async def on_select_option(interaction):
         db.commit()
 
         # insert the row into the table user
-        cursor.execute("INSERT INTO games (game_id, user_id, time, team) VALUES ( %s, %s, %s, %s)", (row[4], user, row[3], row[4]))
+        cursor.execute("INSERT INTO games (game_id, user_id, time, team) VALUES ( %s, %s, %s, %s)", (row[4], user, row[3], row[5]))
         db.commit()
 
         # delete the interaction
@@ -765,7 +765,7 @@ async def lastgame(ctx):
     game_id = cursor.fetchone()[0]
 
     # get all rows from the games table where the game_id is the same as the one we just found
-    cursor.execute("SELECT user_id FROM games WHERE game_id = %s SORT BY team ASC", (game_id,))
+    cursor.execute("SELECT user_id FROM games WHERE game_id = %s ORDER BY team ASC", (game_id,))
     result = cursor.fetchall()
 
     first = True
@@ -823,5 +823,26 @@ async def lastgame(ctx):
     # delete the image files
 
     os.remove(name_image_stiched_lg)
+
+# a command to show the total number of players and games logged
+@bot.command(name="stats", help="Shows the total number of players and games logged",aliases=["ostatistics","overwatchstats","overwatchstatistics","ostats","ostat"])
+async def stats(ctx):
+    # get the number of players and games from the tables
+    database = connect()
+    cursor = database.cursor
+    db = database.db
+
+    cursor.execute("SELECT COUNT(*) FROM users")
+    num_players = cursor.fetchone()[0]
+
+    # get the game with the highest game_id
+    cursor.execute("SELECT game_id FROM games ORDER BY game_id DESC LIMIT 1")
+    games = cursor.fetchone()[0]
+
+    # send the number of players and games to discord as an embed
+    embed = discord.Embed(title="Stats", description=f"There are {num_players} players and {games} games logged", color=0x00ff00)
+    await ctx.send(embed=embed)
+
+    disconnect(database)
 
 bot.run(bot_token)
