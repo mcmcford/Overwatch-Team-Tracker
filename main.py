@@ -572,6 +572,8 @@ async def on_select_option(interaction):
     id = temp[0]
     user = temp[1]
 
+    print("DEBUG: id = " + id + " user = " + user)
+
     # connect to database
     database = connect()
     cursor = database.cursor
@@ -581,6 +583,8 @@ async def on_select_option(interaction):
         # get the  row from the table temp_user based on the id
         cursor.execute("SELECT * FROM temp_user WHERE local_id = %s", (id,))
         row = cursor.fetchone()
+
+        print("DEBUG: row = " + str(row))
 
         # insert the row into the table user
         cursor.execute("INSERT INTO users (name, image, time) VALUES ( %s, %s, %s)", (row[1], row[2], row[3]))
@@ -746,14 +750,9 @@ async def correct(ctx, id: str = None, name: str = None):
 
     # send embed to discord, with the image pfp_image as the thumbnail, the image name_image as the image, and the text as the title
     embed = discord.Embed(title=name, url="https://www.overbuff.com/search?q=" + name, description =descript, color=0x00ff00)
-    #file = discord.File(pfp_image, filename="image.png")
-    #file1 = discord.File(name_image, filename="image2.png")
-    #file1 = discord.File(lvl_image, filename="image2.png")
     file1 = discord.File(full_image, filename="image2.png")
     embed.set_image(url="attachment://image2.png")
     await ctx.send(files=[file1], embed=embed, components=comps)
-    #embed.set_thumbnail(url="attachment://image.png")
-    #await ctx.send(files=[file1,file], embed=embed, components=comps)
 
 # bot command called last game to show the players in the last submitted game
 @bot.command(name="lastgame", help="Shows the players in the last submitted game")
