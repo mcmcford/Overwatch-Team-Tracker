@@ -3,3 +3,4 @@ config.ini
 chromedriver.exe
 *.png
 FULL_IMAGE.jpg
+*.jpg

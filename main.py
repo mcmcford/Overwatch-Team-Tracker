@@ -244,7 +244,6 @@ async def analyse(ctx):
 
 
                 pfp_image = f"pfp-{random_number}.png"
-                lvl_image = f"lvl-{random_number}.png"
                 full_image = f"full-{random_number}.png"
 
                 img = cv2.imread(name_image)
@@ -266,10 +265,11 @@ async def analyse(ctx):
                 except:
                     text = text
                 
+                # remove common mistakes
+                text = text.replace(":", "").replace("'", "").replace(".", "")
+
                 with open(full_image,'rb') as f:
                     fileData=f.read()
-
-
 
                 users.append([text, random_number])
                 cursor.execute("INSERT INTO temp_user (local_id, name, image, time, game_id) VALUES (%s, %s, %s, %s, %s)", (str(random_number), text, fileData, time.time(), str(game_id)))
@@ -375,6 +375,9 @@ async def analyse(ctx):
                 await ctx.send(files=[file1], embed=embed, components=comps)
                 #embed.set_thumbnail(url="attachment://image.png")
                 #await ctx.send(files=[file1,file], embed=embed, components=comps)
+
+                # delete the images we created
+                os.remove(full_image)
             else:
                 await ctx.send("Failed RGB test:\nRGB = " + str(r) + " " +  str(g) + " " + str(b),file=discord.File(name_image))
 
@@ -763,8 +766,62 @@ async def lastgame(ctx):
     game_id = cursor.fetchone()[0]
 
     # get all rows from the games table where the game_id is the same as the one we just found
-    cursor.execute("SELECT * FROM games WHERE game_id = %s", (game_id,))
+    cursor.execute("SELECT user_id FROM games WHERE game_id = %s", (game_id,))
     result = cursor.fetchall()
+
+    first = True
+    i = 1
+    description = "Name, last logged\n\n"
+
+    for x in result:
+        # get the name of the user from the users table where the user_id is the same as the one we just found
+        cursor.execute("SELECT name,image,time FROM users WHERE local_id = %s", (x[0],))
+        details = cursor.fetchone()
+
+        # calculate the time since the user was last logged
+        time_since = datetime.datetime.now() - datetime.datetime.fromtimestamp(details[2])
+        # convert the time from epoch to hh:mm:ss
+        time_since = time_since.seconds // 3600, time_since.seconds // 60, time_since.seconds % 60
+        time_since = str(time_since[0]) + ":" + str(time_since[1]) + ":" + str(time_since[2])
+        
+        # convert the name to all uppercase
+
+        description = description + f"{details[0].upper()},      **{time_since}**\n"
+
+        # save the image of the user to a file
+        random_number = str(rand.randint(0, 999999999999999)).zfill(15)
+        name_image_lg = f"name-{random_number}-lg.png"
+        with open(name_image_lg, "wb") as fh:
+            fh.write(details[1])
+
+        # open the image just saved
+        im = Image.open(name_image_lg)
+
+
+
+        if first == True:
+            first = False
+            # create an image
+            result = Image.new('RGB', (im.width, (im.height * len(result))))
+            result.paste(im, (0, 0))
+        else:
+            result.paste(im, (0, (im.height * i)))
+            i += 1
+
+    name_image_stiched_lg = f"name-{random_number}-stlg.png"
+
+    # save the image to a file
+    result.save(name_image_stiched_lg)
+
+    # send the image to discord as an embed
+    file = discord.File(name_image_stiched_lg, filename="image.png")
+    embed = discord.Embed(title="Here is the last game I logged",description=description, color=0x00ff00)
+    embed.set_thumbnail(url="attachment://image.png")
+    await ctx.send(files=[file], embed=embed)
+
+
+
+
 
     disconnect(database)
 
