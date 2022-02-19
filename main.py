@@ -388,6 +388,9 @@ async def analyse(ctx):
             pfp_bottom += next_user_in_image
             level_top += next_user_in_image
             level_buttom += next_user_in_image
+
+            # delete the images we created
+            os.remove(name_image)
     
     disconnect(database)
 
@@ -572,7 +575,7 @@ async def on_select_option(interaction):
     id = temp[0]
     user = temp[1]
 
-    print("DEBUG: id = " + id + " user = " + user)
+    #print("DEBUG: id = " + id + " user = " + user)
 
     # connect to database
     database = connect()
@@ -584,7 +587,7 @@ async def on_select_option(interaction):
         cursor.execute("SELECT * FROM temp_user WHERE local_id = %s", (id,))
         row = cursor.fetchone()
 
-        print("DEBUG: row = " + str(row))
+        #print("DEBUG: row = " + str(row))
 
         # insert the row into the table user
         cursor.execute("INSERT INTO users (name, image, time) VALUES ( %s, %s, %s)", (row[1], row[2], row[3]))
@@ -609,6 +612,8 @@ async def on_select_option(interaction):
         # get the  row from the table temp_user based on the id
         cursor.execute("SELECT * FROM temp_user WHERE local_id = %s", (id,))
         row = cursor.fetchone()
+
+        #print("DEBUG: row = " + str(row))
 
         # insert the row into the table user
 
@@ -697,13 +702,13 @@ async def correct(ctx, id: str = None, name: str = None):
                 fh.write(user[2])
             
             if i == 2:
-                opts.append(SelectOption(label=f"{i}nd user", value=f"{random_number},{int(user[0])}"))
+                opts.append(SelectOption(label=f"{i}nd user", value=f"{id},{int(user[0])}"))
                 descript = descript + f"{i}nd user has been logged {result_count[0]} times, last logged {result_time}\n\n"
             elif i == 3:
-                opts.append(SelectOption(label=f"{i}rd user", value=f"{random_number},{int(user[0])}"))
+                opts.append(SelectOption(label=f"{i}rd user", value=f"{id},{int(user[0])}"))
                 descript = descript + f"{i}rd user has been logged {result_count[0]} times, last logged {result_time}\n\n"
             else:
-                opts.append(SelectOption(label=f"{i}th user", value=f"{random_number},{int(user[0])}"))
+                opts.append(SelectOption(label=f"{i}th user", value=f"{id},{int(user[0])}"))
                 descript = descript + f"{i}th user has been logged {result_count[0]} times, last logged {result_time}\n\n"
             
             i += 1
