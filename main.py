@@ -269,7 +269,7 @@ async def analyse(ctx):
                     text = text
                 
                 # remove common mistakes
-                text = text.replace(":", "").replace("'", "").replace(".", "")
+                text = text.replace(":", "").replace("'", "").replace(".", "").replace(")", "").replace("(", "")
 
                 with open(full_image,'rb') as f:
                     fileData=f.read()
@@ -522,8 +522,12 @@ async def on_button_click(interaction):
     cursor.execute("SELECT * FROM temp_user WHERE local_id = %s", (id,))
     row = cursor.fetchone()
 
+    print(row)
+
     if "CN" in custom_id:
         
+        print(row[1],row[3])
+
         # insert the row into the table user
         cursor.execute("INSERT INTO users (name, image, time) VALUES ( %s, %s, %s)", (row[1], row[2], row[3]))
         db.commit()
@@ -646,13 +650,20 @@ async def correct(ctx, id: str = None, name: str = None):
     cursor = database.cursor
     db = database.db
 
+    # get the row from the table temp_user based on the id
+    cursor.execute("SELECT * FROM temp_user WHERE local_id = %s", (id,))
+    row = cursor.fetchone()
+
     # update the name of the user
     cursor.execute("UPDATE temp_user SET name = %s WHERE local_id = %s", (name, id))
     db.commit()
 
-    # get the  row from the table temp_user based on the id
-    cursor.execute("SELECT * FROM temp_user WHERE local_id = %s", (id,))
-    row = cursor.fetchone()
+    # add the incorrect and correct name to the table corrections
+    cursor.execute("INSERT INTO corrections (original, correct) VALUES ( %s, %s)", (row[1], name))
+    db.commit()
+
+    # update the position in the list
+    row[1] = name
 
     # select users from the table users who have the same name as the one we just found
     cursor.execute("SELECT * FROM users WHERE name = %s", (name,))
