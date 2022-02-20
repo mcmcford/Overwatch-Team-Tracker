@@ -339,6 +339,9 @@ async def analyse(ctx):
                     images = [Image.open(full_image)]
                     for user in users:
                         images.append(Image.open(user[1]))
+
+                        # delete the image since it is now in the images list
+                        os.remove(user[1])
                     result = Image.new('RGB', (images[0].width, (images[0].height * len(images)) + 10))
                     for i, image in enumerate(images):
                         if i == 0:
@@ -394,8 +397,9 @@ async def analyse(ctx):
     
     disconnect(database)
 
+    # delete the images we created
+    os.remove("temp_1.png")
 
-    
 
     '''
     option = webdriver.ChromeOptions()
@@ -734,6 +738,9 @@ async def correct(ctx, id: str = None, name: str = None):
         images = [Image.open(full_image)]
         for user in users:
             images.append(Image.open(user[1]))
+
+            # delete the image as it is now in the images list
+            os.remove(user[1])
         result = Image.new('RGB', (images[0].width, (images[0].height * len(images)) + 10))
         for i, image in enumerate(images):
             if i == 0:
@@ -770,6 +777,9 @@ async def correct(ctx, id: str = None, name: str = None):
     file1 = discord.File(full_image, filename="image2.png")
     embed.set_image(url="attachment://image2.png")
     await ctx.send(files=[file1], embed=embed, components=comps)
+
+    # delete the images
+    os.remove(full_image)
 
 # bot command called last game to show the players in the last submitted game
 @bot.command(name="lastgame", help="Shows the players in the last submitted game")
