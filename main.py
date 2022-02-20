@@ -522,7 +522,7 @@ async def on_button_click(interaction):
     cursor.execute("SELECT * FROM temp_user WHERE local_id = %s", (id,))
     row = cursor.fetchone()
 
-    print(row)
+    #print(row)
 
     if "CN" in custom_id:
         
@@ -663,7 +663,8 @@ async def correct(ctx, id: str = None, name: str = None):
     db.commit()
 
     # update the position in the list
-    row[1] = name
+    temp = [row[0], row[1], row[2], row[3] ,row[4], row[5]]
+    row = [temp[0], name, temp[2], temp[3], temp[4], temp[5]]
 
     # select users from the table users who have the same name as the one we just found
     cursor.execute("SELECT * FROM users WHERE name = %s", (name,))
